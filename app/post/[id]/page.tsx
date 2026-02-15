@@ -1,33 +1,49 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { useParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { formatDate } from "@/app/_utils/formatDate";
+import type { Post } from "@/types/post";
 
-type Post = {
-  id: number;
-  title: string;
-  thumbnailUrl: string;
-  createdAt: string;
-  categories: string[];
-  content: string;
-};
+export default function PostDetail() {
+  const { id } = useParams();
 
-const PostDetail = async ({ params }: { params: Promise<{ id: string }> }) => {
-  const { id } = await params;
+  const [post, setPost] = useState<Post | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const response = await fetch(
-    `https://1hmfpsvto6.execute-api.ap-northeast-1.amazonaws.com/dev/posts/${id}`,
-  );
+  useEffect(() => {
+    const fetchPost = async () => {
+      const response = await fetch(
+        `https://1hmfpsvto6.execute-api.ap-northeast-1.amazonaws.com/dev/posts/${id}`,
+      );
 
-  if (!response.ok) {
-    return <div>データの取得に失敗しました</div>;
+      if (!response.ok) {
+        setError("データの取得に失敗しました");
+        setIsLoading(false);
+        return;
+      }
+
+      const data = await response.json();
+      setPost(data.post);
+      setIsLoading(false);
+    };
+
+    fetchPost();
+  }, [id]);
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center min-h-screen">
+        <div className="animate-spin h-10 w-10 border-4 border-blue-500 rounded-full border-t-transparent"></div>
+        <p className="ml-4">記事を読み込み中です...</p>
+      </div>
+    );
   }
-
-  const data = await response.json();
-  const post: Post = data.post;
-
-  if (!post) {
-    return <div>記事が見つかりませんでした</div>;
-  }
+  if (error) return <div>{error}</div>;
+  if (!post) return <div>記事が見つかりませんでした</div>;
 
   return (
     <main className="max-w-4xl mx-auto px-4 py-10">
@@ -66,6 +82,4 @@ const PostDetail = async ({ params }: { params: Promise<{ id: string }> }) => {
       </div>
     </main>
   );
-};
-
-export default PostDetail;
+}

@@ -1,22 +1,35 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { formatDate } from "./_utils/formatDate";
+import { formatDate } from "@/app/_utils/formatDate";
+import type { Post } from "@/types/post";
 
-type Post = {
-  id: number;
-  title: string;
-  thumbnailUrl: string;
-  createdAt: string;
-  categories: string[];
-  content: string;
-};
+export default function PostList() {
+  const [posts, setPosts] = useState<Post[]>([]);
+  const [loading, setLoading] = useState(true);
 
-export default async function PostList() {
-  const response = await fetch(
-    "https://1hmfpsvto6.execute-api.ap-northeast-1.amazonaws.com/dev/posts",
-  );
-  const data = await response.json();
-  const posts: Post[] = data.posts;
+  useEffect(() => {
+    const fetchPosts = async () => {
+      const response = await fetch(
+        "https://1hmfpsvto6.execute-api.ap-northeast-1.amazonaws.com/dev/posts",
+      );
+      const data = await response.json();
+      setPosts(data.posts);
+      setLoading(false);
+    };
+    fetchPosts();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center min-h-screen">
+        <div className="animate-spin h-10 w-10 border-4 border-blue-500 rounded-full border-t-transparent"></div>
+        <p className="ml-4">記事を読み込み中です...</p>
+      </div>
+    );
+  }
 
   return (
     <main className="max-w-4xl mx-auto py-8">
