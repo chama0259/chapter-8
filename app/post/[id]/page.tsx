@@ -5,29 +5,35 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { formatDate } from "@/app/_utils/formatDate";
-import type { Post } from "@/_types/post";
+import type { MicroCmsPost } from "@/_types/MicroCmsPost";
 
 export default function PostDetail() {
   const { id } = useParams();
 
-  const [post, setPost] = useState<Post | null>(null);
+  const [post, setPost] = useState<MicroCmsPost | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const fetchPost = async () => {
-      const response = await fetch(
-        `https://1hmfpsvto6.execute-api.ap-northeast-1.amazonaws.com/dev/posts/${id}`,
+      const res = await fetch(
+        `https://751q72qikz.microcms.io/api/v1/posts/${id}`,
+        {
+          headers: {
+            "X-MICROCMS-API-KEY": process.env
+              .NEXT_PUBLIC_MICROSMS_API_KEY as string,
+          },
+        },
       );
 
-      if (!response.ok) {
+      if (!res.ok) {
         setError("データの取得に失敗しました");
         setIsLoading(false);
         return;
       }
 
-      const data = await response.json();
-      setPost(data.post);
+      const data = await res.json();
+      setPost(data);
       setIsLoading(false);
     };
 
@@ -50,7 +56,7 @@ export default function PostDetail() {
       <article className="flex flex-col gap-4">
         <div className="relative w-full h-[400px]">
           <Image
-            src={post.thumbnailUrl}
+            src={post.thumbnail.url}
             alt={`${post.title}の画像`}
             fill
             priority
@@ -63,10 +69,10 @@ export default function PostDetail() {
           <div className="flex gap-2">
             {post.categories.map((category) => (
               <span
-                key={category}
+                key={category.id}
                 className="bg-gray-100 text-gray-500 text-xs px-2 py-0.5 rounded-full"
               >
-                {category}
+                {category.name}
               </span>
             ))}
           </div>
