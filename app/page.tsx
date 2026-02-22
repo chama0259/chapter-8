@@ -4,25 +4,28 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { formatDate } from "@/app/_utils/formatDate";
-import type { Post } from "@/_types/post";
+import type { MicroCmsPost } from "@/_types/MicroCmsPost";
 
 export default function PostList() {
-  const [posts, setPosts] = useState<Post[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [posts, setPosts] = useState<MicroCmsPost[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const fetchPosts = async () => {
-      const response = await fetch(
-        "https://1hmfpsvto6.execute-api.ap-northeast-1.amazonaws.com/dev/posts",
-      );
-      const data = await response.json();
-      setPosts(data.posts);
-      setLoading(false);
+      const res = await fetch("https://751q72qikz.microcms.io/api/v1/posts", {
+        headers: {
+          "X-MICROCMS-API-KEY": process.env
+            .NEXT_PUBLIC_MICROSMS_API_KEY as string,
+        },
+      });
+      const { contents } = await res.json();
+      setPosts(contents);
+      setIsLoading(false);
     };
     fetchPosts();
   }, []);
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="flex justify-center items-center min-h-screen">
         <div className="animate-spin h-10 w-10 border-4 border-blue-500 rounded-full border-t-transparent"></div>
@@ -40,7 +43,7 @@ export default function PostList() {
             <article className="flex flex-row gap-6 p-4 transition-colors border-b border-gray-100">
               <div className="relative flex-shrink-0 w-64 h-40">
                 <Image
-                  src={post.thumbnailUrl}
+                  src={post.thumbnail.url}
                   alt={`${post.title}の画像`}
                   fill
                   priority
@@ -54,10 +57,10 @@ export default function PostList() {
                   <div className="flex gap-2">
                     {post.categories.map((category) => (
                       <span
-                        key={category}
+                        key={category.id}
                         className="bg-gray-100 text-gray-500 text-xs px-2 py-0.5 rounded-full"
                       >
-                        {category}
+                        {category.name}
                       </span>
                     ))}
                   </div>
