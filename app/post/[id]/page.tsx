@@ -5,26 +5,18 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { formatDate } from "@/app/_utils/formatDate";
-import type { MicroCmsPost } from "@/_types/MicroCmsPost";
+import type { PostShowResponse } from "@/app/api/posts/[id]/route";
 
 export default function PostDetail() {
   const { id } = useParams();
 
-  const [post, setPost] = useState<MicroCmsPost | null>(null);
+  const [post, setPost] = useState<PostShowResponse["post"] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const fetchPost = async () => {
-      const res = await fetch(
-        `https://751q72qikz.microcms.io/api/v1/posts/${id}`,
-        {
-          headers: {
-            "X-MICROCMS-API-KEY": process.env
-              .NEXT_PUBLIC_MICROSMS_API_KEY as string,
-          },
-        },
-      );
+      const res = await fetch(`/api/posts/${id}`, {});
 
       if (!res.ok) {
         setError("データの取得に失敗しました");
@@ -32,8 +24,8 @@ export default function PostDetail() {
         return;
       }
 
-      const data = await res.json();
-      setPost(data);
+      const { post } = await res.json();
+      setPost(post);
       setIsLoading(false);
     };
 
@@ -56,23 +48,27 @@ export default function PostDetail() {
       <article className="flex flex-col gap-4">
         <div className="relative w-full h-[400px]">
           <Image
-            src={post.thumbnail.url}
+            src={post.thumbnailUrl}
             alt={`${post.title}の画像`}
             fill
             priority
           />
         </div>
         <div className="flex items-center gap-3 mt-2">
-          <time dateTime={post.createdAt} className="text-gray-400">
+          <time
+            // new Date() したものを .toISOString() で文字列に戻す。機械用の生データに戻す。
+            dateTime={new Date(post.createdAt).toISOString()}
+            className="text-gray-400"
+          >
             {formatDate(post.createdAt)}
           </time>
           <div className="flex gap-2">
-            {post.categories.map((category) => (
+            {post.postCategories.map((item) => (
               <span
-                key={category.id}
+                key={item.category.id}
                 className="bg-gray-100 text-gray-500 text-xs px-2 py-0.5 rounded-full"
               >
-                {category.name}
+                {item.category.name}
               </span>
             ))}
           </div>

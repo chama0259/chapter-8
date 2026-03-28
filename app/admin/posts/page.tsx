@@ -4,18 +4,18 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 // import Image from "next/image";
 import { formatDate } from "@/app/_utils/formatDate";
-import { PostsIndexResponse } from "@/app/api/posts/route";
+import { PostIndexResponse } from "@/app/api/admin/posts/route";
 
 export default function PostList() {
   //配列として扱うため中身の型だけ
-  const [posts, setPosts] = useState<PostsIndexResponse["posts"]>([]);
+  const [posts, setPosts] = useState<PostIndexResponse["posts"]>([]);
 
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const fetchPosts = async () => {
       //Next.jsのAPIに切り替え。ローカルなのでheaders(認証)は不要。
-      const res = await fetch("/api/posts", {});
+      const res = await fetch("/api/admin/posts", {});
       const { posts } = await res.json();
       setPosts(posts);
       setIsLoading(false);
@@ -33,11 +33,21 @@ export default function PostList() {
   }
 
   return (
-    <main className="max-w-4xl mx-auto py-8">
-      <h1 className="text-2xl font-bold mb-8 ml-4">記事一覧</h1>
+    <main className="w-full px-6 ">
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-xl font-bold">記事一覧</h2>
+        <Link href={`/admin/posts/new`}>
+          <button
+            type="button"
+            className="  px-5 py-2.5 bg-blue-500 text-white font-bold rounded-lg hover:bg-gray-300 "
+          >
+            新規作成
+          </button>
+        </Link>
+      </div>
       <div className="flex flex-col gap-6">
         {posts.map((post) => (
-          <Link href={`/post/${post.id}`} key={post.id}>
+          <Link href={`/admin/posts/${post.id}`} key={post.id}>
             <article className="flex flex-row gap-6 p-4 border-b border-gray-100 transition-all hover:bg-gray-100 cursor-pointer">
               <div className="flex flex-col gap-2 flex-grow">
                 <div className="flex items-center gap-3">
