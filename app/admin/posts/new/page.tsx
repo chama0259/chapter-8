@@ -14,7 +14,7 @@ const NewPostForm = () => {
   const [thumbnailUrl, setThumbnailUrl] = useState("");
   const [allCategories, setAllCategories] = useState<Category[]>([]);
   const [selectedCategories, setSelectedCategories] = useState<Category[]>([]);
-  const [isCreating, setIsCreating] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     const fetchAllCategories = async () => {
@@ -42,7 +42,7 @@ const NewPostForm = () => {
 
   const handleCreate = async (e: React.SyntheticEvent) => {
     e.preventDefault();
-    setIsCreating(true);
+    setIsLoading(true);
 
     try {
       const body: CreatePostRequestBody = {
@@ -67,7 +67,7 @@ const NewPostForm = () => {
     } catch {
       alert("通信エラーが発生しました");
     } finally {
-      setIsCreating(false);
+      setIsLoading(false);
     }
   };
 
@@ -86,7 +86,7 @@ const NewPostForm = () => {
         selectedCategories={selectedCategories}
         toggleCategory={toggleCategory}
         onSubmit={handleCreate}
-        isUpdating={isCreating}
+        isLoading={isLoading}
       />
     </div>
   );

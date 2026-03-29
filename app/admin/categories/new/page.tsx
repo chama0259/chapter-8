@@ -10,11 +10,11 @@ const NewCategory = () => {
 
   const [name, setName] = useState("");
 
-  const [isCreating, setIsCreating] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleCreate = async (e: React.SyntheticEvent) => {
     e.preventDefault();
-    setIsCreating(true);
+    setIsLoading(true);
 
     try {
       const body: CreateCategoryRequestBody = {
@@ -36,7 +36,7 @@ const NewCategory = () => {
     } catch {
       alert("通信エラーが発生しました");
     } finally {
-      setIsCreating(false);
+      setIsLoading(false);
     }
   };
   return (
@@ -46,7 +46,7 @@ const NewCategory = () => {
         mode="new"
         name={name}
         setName={setName}
-        isUpdating={isCreating}
+        isLoading={isLoading}
         onSubmit={handleCreate}
       />
     </div>

@@ -18,7 +18,7 @@ const EditPostForm = () => {
   const [thumbnailUrl, setThumbnailUrl] = useState("");
   const [allCategories, setAllCategories] = useState<Category[]>([]);
   const [selectedCategories, setSelectedCategories] = useState<Category[]>([]);
-  const [isUpdating, setIsUpdating] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -60,22 +60,29 @@ const EditPostForm = () => {
   const handleDelete = async () => {
     if (!confirm("本当にこの記事を削除しますか？")) return;
 
-    const res = await fetch(`/api/admin/posts/${id}`, {
-      method: "DELETE",
-    });
+    try {
+      setIsLoading(true);
+      const res = await fetch(`/api/admin/posts/${id}`, {
+        method: "DELETE",
+      });
 
-    if (res.ok) {
-      alert("削除しました");
-      router.push("/admin/posts");
-    } else {
-      alert("削除に失敗しました");
+      if (res.ok) {
+        alert("削除しました");
+        router.push("/admin/posts");
+      } else {
+        alert("削除に失敗しました");
+      }
+    } catch {
+      alert("通信エラーが発生しました");
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const handleUpdate = async (e: React.SyntheticEvent) => {
     e.preventDefault();
 
-    setIsUpdating(true);
+    setIsLoading(true);
 
     try {
       const body: UpdatePostRequestBody = {
@@ -99,7 +106,7 @@ const EditPostForm = () => {
     } catch {
       alert("通信エラーが発生しました");
     } finally {
-      setIsUpdating(false);
+      setIsLoading(false);
     }
   };
 
@@ -119,7 +126,7 @@ const EditPostForm = () => {
         toggleCategory={toggleCategory}
         onSubmit={handleUpdate}
         onDelete={handleDelete}
-        isUpdating={isUpdating}
+        isLoading={isLoading}
       />
     </div>
   );

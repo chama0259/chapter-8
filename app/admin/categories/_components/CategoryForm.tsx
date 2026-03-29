@@ -6,11 +6,11 @@ type Props = {
   setName: (value: string) => void;
   onSubmit: (e: React.SyntheticEvent) => void;
   onDelete?: () => void;
-  isUpdating: boolean;
+  isLoading: boolean;
 };
 
 export const CategoryForm = (props: Props) => {
-  const { mode, name, setName, onSubmit, onDelete, isUpdating } = props;
+  const { mode, name, setName, onSubmit, onDelete, isLoading } = props;
 
   return (
     <form onSubmit={onSubmit} className="flex flex-col gap-6 mt-10 mb-20">
@@ -22,7 +22,7 @@ export const CategoryForm = (props: Props) => {
           required
           value={name}
           onChange={(e) => setName(e.target.value)}
-          disabled={isUpdating}
+          disabled={isLoading}
           id="category-name"
           name="category-name"
           type="text"
@@ -31,7 +31,7 @@ export const CategoryForm = (props: Props) => {
       </div>
       <div className="flex justify-start gap-4 mt-4">
         <button
-          disabled={isUpdating}
+          disabled={isLoading}
           type="submit"
           className="px-5 py-2.5 bg-indigo-600 text-white font-bold rounded-lg hover:bg-gray-800"
         >
@@ -40,7 +40,7 @@ export const CategoryForm = (props: Props) => {
         {mode === "edit" && onDelete && (
           <button
             onClick={onDelete}
-            disabled={isUpdating}
+            disabled={isLoading}
             type="button"
             className="px-5 py-2.5 bg-red-500 text-white font-bold rounded-lg hover:bg-gray-300 "
           >

@@ -11,8 +11,7 @@ const EditCategory = () => {
   // const [category, setCategory] = useState();
   const [name, setName] = useState("");
 
-  // const [isLoading, setLoading] = useState(true);
-  const [isUpdating, setIsUpdating] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   useEffect(() => {
     const fetchCategory = async () => {
       try {
@@ -29,15 +28,22 @@ const EditCategory = () => {
 
   const handleDelete = async () => {
     if (!confirm("本当にこのカテゴリーを削除しますか？")) return;
+    setIsLoading(true);
 
-    const res = await fetch(`/api/admin/categories/${[id]}`, {
-      method: "DELETE",
-    });
-    if (res.ok) {
-      alert("削除しました");
-      router.push("/admin/categories");
-    } else {
-      alert("削除に失敗しました");
+    try {
+      const res = await fetch(`/api/admin/categories/${id}`, {
+        method: "DELETE",
+      });
+      if (res.ok) {
+        alert("削除しました");
+        router.push("/admin/categories");
+      } else {
+        alert("削除に失敗しました");
+      }
+    } catch {
+      alert("通信エラーが発生しました");
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -45,13 +51,13 @@ const EditCategory = () => {
     //HTML<form>のsubmit時のページリロード機能を防ぐ
     e.preventDefault();
 
-    setIsUpdating(true);
+    setIsLoading(true);
 
     try {
       const body: UpdateCategoryRequestBody = {
         name,
       };
-      const res = await fetch(`/api/admin/categories/${[id]}`, {
+      const res = await fetch(`/api/admin/categories/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
@@ -65,7 +71,7 @@ const EditCategory = () => {
     } catch {
       alert("通信エラーが発生しました");
     } finally {
-      setIsUpdating(false);
+      setIsLoading(false);
     }
   };
 
@@ -78,7 +84,7 @@ const EditCategory = () => {
         setName={setName}
         onSubmit={handleUpdate}
         onDelete={handleDelete}
-        isUpdating={isUpdating}
+        isLoading={isLoading}
       />
     </div>
   );

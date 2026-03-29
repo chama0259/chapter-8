@@ -15,7 +15,7 @@ type Props = {
   toggleCategory: (cat: Category) => void;
   onSubmit: (e: React.SyntheticEvent) => void;
   onDelete?: () => void;
-  isUpdating: boolean;
+  isLoading: boolean;
 };
 
 export const PostForm = (props: Props) => {
@@ -32,7 +32,7 @@ export const PostForm = (props: Props) => {
     toggleCategory,
     onSubmit,
     onDelete,
-    isUpdating,
+    isLoading,
   } = props;
 
   return (
@@ -45,7 +45,7 @@ export const PostForm = (props: Props) => {
           <input
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            disabled={isUpdating}
+            disabled={isLoading}
             id="title"
             name="title"
             type="text"
@@ -61,7 +61,7 @@ export const PostForm = (props: Props) => {
           <textarea
             value={content}
             onChange={(e) => setContent(e.target.value)}
-            disabled={isUpdating}
+            disabled={isLoading}
             id="content"
             name="content"
             className="flex-1 border border-gray-300 p-2 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
@@ -76,7 +76,7 @@ export const PostForm = (props: Props) => {
           <input
             value={thumbnailUrl}
             onChange={(e) => setThumbnailUrl(e.target.value)}
-            disabled={isUpdating}
+            disabled={isLoading}
             id="thumbnailUrl"
             name="thumbnailUrl"
             type="text"
@@ -95,7 +95,7 @@ export const PostForm = (props: Props) => {
                 key={cat.id}
                 type="button"
                 onClick={() => toggleCategory(cat)}
-                disabled={isUpdating}
+                disabled={isLoading}
                 className={`px-4 py-2 rounded-full border text-sm transition-colors ${
                   isSelected
                     ? "bg-blue-500 text-white"
@@ -111,7 +111,7 @@ export const PostForm = (props: Props) => {
 
       <div className="flex justify-start gap-4 mt-4">
         <button
-          disabled={isUpdating}
+          disabled={isLoading}
           type="submit"
           className="px-5 py-2.5 bg-indigo-600 text-white font-bold rounded-lg hover:bg-gray-800"
         >
@@ -121,7 +121,7 @@ export const PostForm = (props: Props) => {
         {mode === "edit" && onDelete && (
           <button
             onClick={onDelete}
-            disabled={isUpdating}
+            disabled={isLoading}
             type="button"
             className="px-5 py-2.5 bg-red-500 text-white font-bold rounded-lg hover:bg-gray-300 "
           >
