@@ -8,6 +8,7 @@ import type {
   UpdatePostRequestBody,
 } from "@/app/api/admin/posts/[id]/route";
 import { PostForm } from "@/app/admin/posts/_components/PostForm";
+import { useSupabaseSession } from "@/app/_hooks/useSupabaseSession";
 
 const EditPostForm = () => {
   const { id } = useParams();
@@ -15,37 +16,54 @@ const EditPostForm = () => {
 
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
-  const [thumbnailUrl, setThumbnailUrl] = useState("");
+  const [thumbnailImageKey, setThumbnailImageKey] = useState("");
   const [allCategories, setAllCategories] = useState<Category[]>([]);
   const [selectedCategories, setSelectedCategories] = useState<Category[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
+  const { token } = useSupabaseSession();
+
   useEffect(() => {
+    if (!token) return;
+
     const fetchData = async () => {
+      setIsLoading(true);
       try {
-        //全カテゴリーを取得
-        const catRes = await fetch("/api/admin/categories");
+        //全カテゴリーを取得・リクエストのheadersにtokenを付与しサーバー側で検証する
+        const catRes = await fetch("/api/admin/categories", {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: token,
+          },
+        });
         const catData = await catRes.json();
         setAllCategories(catData.categories);
 
-        //編集する記事のデータを取得
-        const postRes = await fetch(`/api/admin/posts/${id}`);
+        //編集する記事のデータを取得・リクエストのheaderにtokenを付与しサーバー側で検証する
+        const postRes = await fetch(`/api/admin/posts/${id}`, {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: token,
+          },
+        });
         const { post }: { post: PostShowResponse["post"] } =
           await postRes.json();
 
         //取得した値をStateに入れることでinputの中身が埋まる
         setTitle(post.title);
         setContent(post.content);
-        setThumbnailUrl(post.thumbnailUrl);
+        setThumbnailImageKey(post.thumbnailImageKey);
 
         const currentCats = post.postCategories.map((pc) => pc.category);
         setSelectedCategories(currentCats);
       } catch (e) {
         console.error("データ取得エラー", e);
+      } finally {
+        setIsLoading(false);
       }
     };
     fetchData();
-  }, [id]);
+  }, [id, token]);
 
   //カテゴリーの選択・解除
   const toggleCategory = (cat: Category) => {
@@ -58,12 +76,17 @@ const EditPostForm = () => {
   };
 
   const handleDelete = async () => {
+    if (!token) return;
     if (!confirm("本当にこの記事を削除しますか？")) return;
 
     try {
       setIsLoading(true);
       const res = await fetch(`/api/admin/posts/${id}`, {
         method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: token,
+        },
       });
 
       if (res.ok) {
@@ -81,6 +104,7 @@ const EditPostForm = () => {
 
   const handleUpdate = async (e: React.SyntheticEvent) => {
     e.preventDefault();
+    if (!token) return;
 
     setIsLoading(true);
 
@@ -88,12 +112,12 @@ const EditPostForm = () => {
       const body: UpdatePostRequestBody = {
         title,
         content,
-        thumbnailUrl,
+        thumbnailImageKey,
         categories: selectedCategories,
       };
       const response = await fetch(`/api/admin/posts/${id}`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", Authorization: token },
         body: JSON.stringify(body),
       });
 
@@ -119,8 +143,8 @@ const EditPostForm = () => {
         setTitle={setTitle}
         content={content}
         setContent={setContent}
-        thumbnailUrl={thumbnailUrl}
-        setThumbnailUrl={setThumbnailUrl}
+        thumbnailImageKey={thumbnailImageKey}
+        setThumbnailImageKey={setThumbnailImageKey}
         allCategories={allCategories}
         selectedCategories={selectedCategories}
         toggleCategory={toggleCategory}

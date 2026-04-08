@@ -1,6 +1,10 @@
 "use client";
 
+import { ChangeEvent, useState, useEffect } from "react";
+import { supabase } from "@/app/_libs/supabase";
+import { v4 as uuidv4 } from "uuid"; //固有IDを生成するライブラリ
 import type { Category } from "@/app/api/admin/posts/[id]/route";
+import Image from "next/image";
 
 type Props = {
   mode: "new" | "edit";
@@ -8,8 +12,8 @@ type Props = {
   setTitle: (value: string) => void;
   content: string;
   setContent: (value: string) => void;
-  thumbnailUrl: string;
-  setThumbnailUrl: (value: string) => void;
+  thumbnailImageKey: string;
+  setThumbnailImageKey: (value: string) => void;
   allCategories: Category[];
   selectedCategories: Category[];
   toggleCategory: (cat: Category) => void;
@@ -25,8 +29,8 @@ export const PostForm = (props: Props) => {
     setTitle,
     content,
     setContent,
-    thumbnailUrl,
-    setThumbnailUrl,
+    thumbnailImageKey,
+    setThumbnailImageKey,
     allCategories,
     selectedCategories,
     toggleCategory,
@@ -34,6 +38,53 @@ export const PostForm = (props: Props) => {
     onDelete,
     isLoading,
   } = props;
+
+  const [thumbnailImageUrl, setThumbnailImageUrl] = useState<null | string>(
+    null,
+  );
+
+  const handleImageChange = async (
+    event: ChangeEvent<HTMLInputElement>,
+  ): Promise<void> => {
+    if (!event.target.files || event.target.files.length == 0) {
+      //画像が選択されていないのでreturn
+      return;
+    }
+
+    const file = event.target.files[0]; //選択された画像を取得
+
+    const filePath = `private/${uuidv4()}`; //ファイルパスを指定
+
+    //supabaseに画像をアップロード
+    const { data, error } = await supabase.storage
+      .from("post_thumbnail")
+      .upload(filePath, file, { cacheControl: "3600", upsert: false });
+
+    //アップロードに失敗したらエラーを表示して終了
+    if (error) {
+      alert(error.message);
+      return;
+    }
+
+    //data.pathに、画像固有のKeyが入っているので、thumbnailImageKeyに格納する
+    setThumbnailImageKey(data.path);
+  };
+
+  useEffect(() => {
+    if (!thumbnailImageKey) return;
+
+    //アップロード時に取得した、thumbnailImageKeyを用いて画像のURLを取得
+    const fetcher = async () => {
+      const {
+        data: { publicUrl },
+      } = await supabase.storage
+        .from("post_thumbnail")
+        .getPublicUrl(thumbnailImageKey);
+
+      setThumbnailImageUrl(publicUrl);
+    };
+    fetcher();
+  }, [thumbnailImageKey]);
 
   return (
     <form onSubmit={onSubmit} className="flex flex-col gap-6 mt-10 mb-20">
@@ -69,26 +120,36 @@ export const PostForm = (props: Props) => {
         </div>
       </div>
       <div className="flex flex-col gap-2">
-        <label htmlFor="thumbnailUrl" className="w-32">
-          サムネイルURL
+        <label htmlFor="thumbnailImage" className="w-32">
+          サムネイル画像
         </label>
         <div className="flex-1 flex flex-col gap-1">
           <input
-            value={thumbnailUrl}
-            onChange={(e) => setThumbnailUrl(e.target.value)}
+            onChange={handleImageChange}
             disabled={isLoading}
-            id="thumbnailUrl"
-            name="thumbnailUrl"
-            type="text"
+            id="thumbnailImage"
+            name="thumbnailImage"
+            type="file"
+            accept="image/*"
             className="flex-1 border border-gray-300 p-2 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
           />
+          {thumbnailImageUrl && (
+            <div className="mt-2">
+              <Image
+                src={thumbnailImageUrl}
+                alt="thumbnail"
+                width={400}
+                height={400}
+              />
+            </div>
+          )}
         </div>
       </div>
 
       <div className="flex flex-col gap-2">
         <label className="">カテゴリー</label>
         <div className="flex flex-wrap gap-2">
-          {allCategories.map((cat) => {
+          {allCategories?.map((cat) => {
             const isSelected = selectedCategories.some((s) => s.id === cat.id);
             return (
               <button

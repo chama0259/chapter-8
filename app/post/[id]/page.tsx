@@ -6,11 +6,15 @@ import Link from "next/link";
 import Image from "next/image";
 import { formatDate } from "@/app/_utils/formatDate";
 import type { PostShowResponse } from "@/app/api/posts/[id]/route";
+import { supabase } from "@/app/_libs/supabase";
 
 export default function PostDetail() {
   const { id } = useParams();
 
   const [post, setPost] = useState<PostShowResponse["post"] | null>(null);
+  const [thumbnailImageUrl, setThumbnailImageUrl] = useState<string | null>(
+    null,
+  );
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -32,6 +36,23 @@ export default function PostDetail() {
     fetchPost();
   }, [id]);
 
+  useEffect(() => {
+    if (!post?.thumbnailImageKey) {
+      return;
+    }
+
+    const fetcher = async () => {
+      const {
+        data: { publicUrl },
+      } = await supabase.storage
+        .from("post_thumbnail")
+        .getPublicUrl(post.thumbnailImageKey);
+
+      setThumbnailImageUrl(publicUrl);
+    };
+    fetcher();
+  }, [post?.thumbnailImageKey]);
+
   if (isLoading) {
     return (
       <div className="flex justify-center items-center min-h-screen">
@@ -46,14 +67,11 @@ export default function PostDetail() {
   return (
     <main className="max-w-4xl mx-auto px-4 py-10">
       <article className="flex flex-col gap-4">
-        <div className="relative w-full h-[400px]">
-          <Image
-            src={post.thumbnailUrl}
-            alt={`${post.title}の画像`}
-            fill
-            priority
-          />
-        </div>
+        {thumbnailImageUrl && (
+          <div className="relative w-full h-[400px]">
+            <Image src={thumbnailImageUrl} alt={"thumbnail"} fill priority />
+          </div>
+        )}
         <div className="flex items-center gap-3 mt-2">
           <time
             // new Date() したものを .toISOString() で文字列に戻す。機械用の生データに戻す。

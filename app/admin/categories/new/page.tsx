@@ -4,16 +4,18 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { CreateCategoryRequestBody } from "@/app/api/admin/categories/route";
 import { CategoryForm } from "@/app/admin/categories/_components/CategoryForm";
+import { useSupabaseSession } from "@/app/_hooks/useSupabaseSession";
 
 const NewCategory = () => {
   const router = useRouter();
 
   const [name, setName] = useState("");
-
   const [isLoading, setIsLoading] = useState(false);
+  const { token } = useSupabaseSession();
 
   const handleCreate = async (e: React.SyntheticEvent) => {
     e.preventDefault();
+    if (!token) return;
     setIsLoading(true);
 
     try {
@@ -23,7 +25,7 @@ const NewCategory = () => {
 
       const res = await fetch("/api/admin/categories", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", Authorization: token },
         body: JSON.stringify(body),
       });
 

@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { UpdateCategoryRequestBody } from "@/app/api/admin/categories/[id]/route";
 import { CategoryForm } from "@/app/admin/categories/_components/CategoryForm";
+import { useSupabaseSession } from "@/app/_hooks/useSupabaseSession";
 
 const EditCategory = () => {
   const { id } = useParams();
@@ -10,29 +11,46 @@ const EditCategory = () => {
 
   // const [category, setCategory] = useState();
   const [name, setName] = useState("");
-
   const [isLoading, setIsLoading] = useState(false);
+  const { token } = useSupabaseSession();
+
   useEffect(() => {
+    if (!token) return;
+
     const fetchCategory = async () => {
+      setIsLoading(true);
+
       try {
         //編集するカテゴリーを取得
-        const res = await fetch(`/api/admin/categories/${id}`);
+        const res = await fetch(`/api/admin/categories/${id}`, {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: token,
+          },
+        });
         const { category } = await res.json();
         setName(category.name);
       } catch (e) {
         console.error("データ取得エラー", e);
+      } finally {
+        setIsLoading(false);
       }
     };
     fetchCategory();
-  }, [id]);
+  }, [id, token]);
 
   const handleDelete = async () => {
+    if (!token) return;
     if (!confirm("本当にこのカテゴリーを削除しますか？")) return;
     setIsLoading(true);
 
     try {
       const res = await fetch(`/api/admin/categories/${id}`, {
         method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: token,
+        },
       });
       if (res.ok) {
         alert("削除しました");
@@ -48,6 +66,7 @@ const EditCategory = () => {
   };
 
   const handleUpdate = async (e: React.SyntheticEvent) => {
+    if (!token) return;
     //HTML<form>のsubmit時のページリロード機能を防ぐ
     e.preventDefault();
 
@@ -59,7 +78,7 @@ const EditCategory = () => {
       };
       const res = await fetch(`/api/admin/categories/${id}`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", Authorization: token },
         body: JSON.stringify(body),
       });
       if (res.ok) {

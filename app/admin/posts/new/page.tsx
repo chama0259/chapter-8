@@ -5,30 +5,43 @@ import { useRouter } from "next/navigation";
 import type { Category } from "@/app/api/admin/posts/[id]/route";
 import { CreatePostRequestBody } from "@/app/api/admin/posts/route";
 import { PostForm } from "@/app/admin/posts/_components/PostForm";
+import { useSupabaseSession } from "@/app/_hooks/useSupabaseSession";
 
 const NewPostForm = () => {
   const router = useRouter();
 
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
-  const [thumbnailUrl, setThumbnailUrl] = useState("");
+  const [thumbnailImageKey, setThumbnailImageKey] = useState("");
   const [allCategories, setAllCategories] = useState<Category[]>([]);
   const [selectedCategories, setSelectedCategories] = useState<Category[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const { token } = useSupabaseSession();
 
   useEffect(() => {
+    if (!token) return;
+
     const fetchAllCategories = async () => {
+      setIsLoading(true);
+
       try {
         //全カテゴリーを取得
-        const catRes = await fetch("/api/admin/categories");
+        const catRes = await fetch("/api/admin/categories", {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: token,
+          },
+        });
         const catData = await catRes.json();
         setAllCategories(catData.categories);
       } catch (e) {
         console.error("データ取得エラー", e);
+      } finally {
+        setIsLoading(false);
       }
     };
     fetchAllCategories();
-  }, []);
+  }, [token]);
 
   //カテゴリーの選択・解除
   const toggleCategory = (cat: Category) => {
@@ -42,19 +55,21 @@ const NewPostForm = () => {
 
   const handleCreate = async (e: React.SyntheticEvent) => {
     e.preventDefault();
+    if (!token) return;
+
     setIsLoading(true);
 
     try {
       const body: CreatePostRequestBody = {
         title,
         content,
-        thumbnailUrl,
+        thumbnailImageKey,
         categories: selectedCategories,
       };
 
       const response = await fetch(`/api/admin/posts`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", Authorization: token },
         body: JSON.stringify(body),
       });
 
@@ -80,8 +95,8 @@ const NewPostForm = () => {
         setTitle={setTitle}
         content={content}
         setContent={setContent}
-        thumbnailUrl={thumbnailUrl}
-        setThumbnailUrl={setThumbnailUrl}
+        thumbnailImageKey={thumbnailImageKey}
+        setThumbnailImageKey={setThumbnailImageKey}
         allCategories={allCategories}
         selectedCategories={selectedCategories}
         toggleCategory={toggleCategory}

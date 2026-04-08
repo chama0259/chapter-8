@@ -5,23 +5,37 @@ import Link from "next/link";
 // import Image from "next/image";
 import { formatDate } from "@/app/_utils/formatDate";
 import { PostIndexResponse } from "@/app/api/admin/posts/route";
+import { useSupabaseSession } from "@/app/_hooks/useSupabaseSession";
 
 export default function PostList() {
   //配列として扱うため中身の型だけ
   const [posts, setPosts] = useState<PostIndexResponse["posts"]>([]);
-
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
+  const { token } = useSupabaseSession();
 
   useEffect(() => {
+    if (!token) return;
+
     const fetchPosts = async () => {
-      //Next.jsのAPIに切り替え。ローカルなのでheaders(認証)は不要。
-      const res = await fetch("/api/admin/posts", {});
-      const { posts } = await res.json();
-      setPosts(posts);
-      setIsLoading(false);
+      setIsLoading(true);
+      try {
+        //APIリクエストのHeaderに token を付与しサーバー側で検証させAPIの利用制限をかける
+        const res = await fetch("/api/admin/posts", {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: token,
+          },
+        });
+        const { posts } = await res.json();
+        setPosts(posts);
+      } catch (e) {
+        console.error(e);
+      } finally {
+        setIsLoading(false);
+      }
     };
     fetchPosts();
-  }, []);
+  }, [token]);
 
   if (isLoading) {
     return (
@@ -46,7 +60,7 @@ export default function PostList() {
         </Link>
       </div>
       <div className="flex flex-col gap-6">
-        {posts.map((post) => (
+        {posts?.map((post) => (
           <Link href={`/admin/posts/${post.id}`} key={post.id}>
             <article className="flex flex-row gap-6 p-4 border-b border-gray-100 transition-all hover:bg-gray-100 cursor-pointer">
               <div className="flex flex-col gap-2 flex-grow">

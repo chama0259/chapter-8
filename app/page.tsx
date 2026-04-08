@@ -36,7 +36,7 @@ export default function PostList() {
     <main className="max-w-4xl mx-auto py-8">
       <h1 className="text-2xl font-bold mb-8 ml-4">記事一覧</h1>
       <div className="flex flex-col gap-6">
-        {posts.map((post) => (
+        {posts?.map((post) => (
           <Link href={`/post/${post.id}`} key={post.id}>
             <article className="flex flex-row gap-6 p-4 border-b border-gray-100 transition-all hover:bg-gray-100 cursor-pointer">
               <div className="flex flex-col gap-2 flex-grow">
