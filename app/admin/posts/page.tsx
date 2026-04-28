@@ -1,42 +1,29 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import useSWR from "swr";
 import Link from "next/link";
-// import Image from "next/image";
 import { formatDate } from "@/app/_utils/formatDate";
-import { PostIndexResponse } from "@/app/api/admin/posts/route";
 import { useSupabaseSession } from "@/app/_hooks/useSupabaseSession";
+import { fetcher } from "@/app/_libs/fetcher";
+import { PostsIndexResponse } from "@/app/api/admin/posts/route";
 
 export default function PostList() {
-  //配列として扱うため中身の型だけ
-  const [posts, setPosts] = useState<PostIndexResponse["posts"]>([]);
-  const [isLoading, setIsLoading] = useState(false);
   const { token } = useSupabaseSession();
 
-  useEffect(() => {
-    if (!token) return;
-
-    const fetchPosts = async () => {
-      setIsLoading(true);
-      try {
-        //APIリクエストのHeaderに token を付与しサーバー側で検証させAPIの利用制限をかける
-        const res = await fetch("/api/admin/posts", {
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: token,
-          },
-        });
-        const { posts } = await res.json();
-        setPosts(posts);
-      } catch (e) {
-        console.error(e);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    fetchPosts();
-  }, [token]);
-
+  //**SWR**
+  const { data, error, isLoading } = useSWR<PostsIndexResponse>(
+    token ? ["/api/admin/posts", token] : null,
+    fetcher,
+  );
+  //①デフォルト値の設定
+  const posts = data?.posts || [];
+  //②エラー判定
+  if (error) {
+    return (
+      <div className="text-center py-10"> データの読み込みに失敗しました。</div>
+    );
+  }
+  //③Loading判定
   if (isLoading) {
     return (
       <div className="flex justify-center items-center min-h-screen">
@@ -60,7 +47,8 @@ export default function PostList() {
         </Link>
       </div>
       <div className="flex flex-col gap-6">
-        {posts?.map((post) => (
+        {/* デフォルト値設定で空配列保証されたので？不要 */}
+        {posts.map((post) => (
           <Link href={`/admin/posts/${post.id}`} key={post.id}>
             <article className="flex flex-row gap-6 p-4 border-b border-gray-100 transition-all hover:bg-gray-100 cursor-pointer">
               <div className="flex flex-col gap-2 flex-grow">

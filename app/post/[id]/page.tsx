@@ -1,40 +1,28 @@
 "use client";
 
+import useSWR from "swr";
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { formatDate } from "@/app/_utils/formatDate";
 import type { PostShowResponse } from "@/app/api/posts/[id]/route";
+import { fetcher } from "@/app/_libs/fetcher";
 import { supabase } from "@/app/_libs/supabase";
 
 export default function PostDetail() {
   const { id } = useParams();
-
-  const [post, setPost] = useState<PostShowResponse["post"] | null>(null);
   const [thumbnailImageUrl, setThumbnailImageUrl] = useState<string | null>(
     null,
   );
-  const [error, setError] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    const fetchPost = async () => {
-      const res = await fetch(`/api/posts/${id}`, {});
-
-      if (!res.ok) {
-        setError("データの取得に失敗しました");
-        setIsLoading(false);
-        return;
-      }
-
-      const { post } = await res.json();
-      setPost(post);
-      setIsLoading(false);
-    };
-
-    fetchPost();
-  }, [id]);
+  //SWR
+  const { data, error, isLoading } = useSWR<PostShowResponse>(
+    id ? `/api/posts/${id}` : null,
+    fetcher,
+  );
+  //①デフォルト値の設定
+  const post = data?.post;
 
   useEffect(() => {
     if (!post?.thumbnailImageKey) {
@@ -53,6 +41,13 @@ export default function PostDetail() {
     fetcher();
   }, [post?.thumbnailImageKey]);
 
+  //②エラー判定
+  if (error) {
+    return (
+      <div className="text-center py-10"> データの読み込みに失敗しました。</div>
+    );
+  }
+  //③isLoading判定
   if (isLoading) {
     return (
       <div className="flex justify-center items-center min-h-screen">
@@ -61,8 +56,12 @@ export default function PostDetail() {
       </div>
     );
   }
-  if (error) return <div>{error}</div>;
-  if (!post) return <div>記事が見つかりませんでした</div>;
+
+  if (!post) {
+    return (
+      <div className="text-center py-10">記事が見つかりませんでした。</div>
+    );
+  }
 
   return (
     <main className="max-w-4xl mx-auto px-4 py-10">

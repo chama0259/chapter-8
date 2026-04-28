@@ -1,28 +1,27 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import useSWR from "swr";
 import Link from "next/link";
-// import Image from "next/image";
 import { formatDate } from "@/app/_utils/formatDate";
+import { fetcher } from "./_libs/fetcher";
 import { PostsIndexResponse } from "@/app/api/posts/route";
 
 export default function PostList() {
-  //配列として扱うため中身の型だけ
-  const [posts, setPosts] = useState<PostsIndexResponse["posts"]>([]);
+  //SWR　（第一引数配列にするのはtokenなどの変数が必要な時だけ）
+  const { data, error, isLoading } = useSWR<PostsIndexResponse>(
+    "/api/posts",
+    fetcher,
+  );
 
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    const fetchPosts = async () => {
-      //Next.jsのAPIに切り替え。ローカルなのでheaders(認証)は不要。
-      const res = await fetch("/api/posts", {});
-      const { posts } = await res.json();
-      setPosts(posts);
-      setIsLoading(false);
-    };
-    fetchPosts();
-  }, []);
-
+  //①デフォルト値設定
+  const posts = data?.posts || [];
+  //②エラー判定
+  if (error) {
+    return (
+      <div className="text-center py-10"> データの読み込みに失敗しました。</div>
+    );
+  }
+  //Loading判定
   if (isLoading) {
     return (
       <div className="flex justify-center items-center min-h-screen">

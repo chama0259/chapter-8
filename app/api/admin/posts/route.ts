@@ -3,7 +3,7 @@ import { NextResponse, NextRequest } from "next/server";
 import { supabase } from "@/app/_libs/supabase";
 
 //GET用型定義
-export type PostIndexResponse = {
+export type PostsIndexResponse = {
   posts: {
     id: number;
     title: string;

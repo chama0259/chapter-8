@@ -1,69 +1,100 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import useSWR from "swr";
+import { useEffect, useState, useRef } from "react";
+import { useForm, SubmitHandler, useWatch } from "react-hook-form";
 import { useParams, useRouter } from "next/navigation";
 import type {
   PostShowResponse,
   Category,
   UpdatePostRequestBody,
 } from "@/app/api/admin/posts/[id]/route";
+import { CategoriesIndexResponse } from "@/app/api/admin/categories/route";
 import { PostForm } from "@/app/admin/posts/_components/PostForm";
 import { useSupabaseSession } from "@/app/_hooks/useSupabaseSession";
+import type { PostsInputs } from "@/app/admin/posts/_components/PostForm";
+import { fetcher } from "@/app/_libs/fetcher";
 
 const EditPostForm = () => {
   const { id } = useParams();
   const router = useRouter();
-
-  const [title, setTitle] = useState("");
-  const [content, setContent] = useState("");
-  const [thumbnailImageKey, setThumbnailImageKey] = useState("");
-  const [allCategories, setAllCategories] = useState<Category[]>([]);
-  const [selectedCategories, setSelectedCategories] = useState<Category[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-
   const { token } = useSupabaseSession();
 
+  //RHF
+  const {
+    register,
+    handleSubmit,
+    setValue,
+    control,
+    reset,
+    formState: { errors, isSubmitting },
+  } = useForm<PostsInputs>();
+
+  const thumbnailImageKey = useWatch({ control, name: "thumbnailImageKey" });
+  const [selectedCategories, setSelectedCategories] = useState<Category[]>([]);
+  const isInitialized = useRef(false);
+
+  //SWR-1・・・全カテゴリー取得用
+  const {
+    data: catData,
+    error: catError,
+    isLoading: isCatLoading,
+  } = useSWR<CategoriesIndexResponse>(
+    token ? ["/api/admin/categories", token] : null,
+    fetcher,
+  );
+  //SWR-2・・・編集対象の記事取得用
+  const {
+    data: postData,
+    error: postError,
+    isLoading: isPostLoading,
+  } = useSWR<PostShowResponse>(
+    id && token ? [`/api/admin/posts/${id}`, token] : null,
+    fetcher,
+  );
+
   useEffect(() => {
-    if (!token) return;
+    //データがない、または既に初期化済みの場合は何もしない
+    if (!postData?.post || isInitialized.current) return;
 
-    const fetchData = async () => {
-      setIsLoading(true);
-      try {
-        //全カテゴリーを取得・リクエストのheadersにtokenを付与しサーバー側で検証する
-        const catRes = await fetch("/api/admin/categories", {
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: token,
-          },
-        });
-        const catData = await catRes.json();
-        setAllCategories(catData.categories);
+    const { post } = postData;
+    //1.フォームの基本情報をリセット
+    const timer = setTimeout(() => {
+      reset({
+        title: post.title,
+        content: post.content,
+        thumbnailImageKey: post.thumbnailImageKey,
+      });
+      //2.選択済みカテゴリーの状態を更新
+      const currentCats = post.postCategories.map((pc) => pc.category);
+      setSelectedCategories(currentCats);
 
-        //編集する記事のデータを取得・リクエストのheaderにtokenを付与しサーバー側で検証する
-        const postRes = await fetch(`/api/admin/posts/${id}`, {
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: token,
-          },
-        });
-        const { post }: { post: PostShowResponse["post"] } =
-          await postRes.json();
+      //「初期化完了」と旗立てる
+      isInitialized.current = true;
+    }, 0);
 
-        //取得した値をStateに入れることでinputの中身が埋まる
-        setTitle(post.title);
-        setContent(post.content);
-        setThumbnailImageKey(post.thumbnailImageKey);
+    return () => clearTimeout(timer); //クリーンアップ
+  }, [postData, reset]);
 
-        const currentCats = post.postCategories.map((pc) => pc.category);
-        setSelectedCategories(currentCats);
-      } catch (e) {
-        console.error("データ取得エラー", e);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    fetchData();
-  }, [id, token]);
+  //①デフォルト値の設定
+  const allCategories = catData?.categories || [];
+  const isLoading = isCatLoading || isPostLoading;
+  const error = catError || postError;
+  //②エラー判定・
+  if (error) {
+    return (
+      <div className="text-center py-10"> データの読み込みに失敗しました。</div>
+    );
+  }
+  //③Loading判定・
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center min-h-screen">
+        <div className="animate-spin h-10 w-10 border-4 border-blue-500 rounded-full border-t-transparent"></div>
+        <p className="ml-4">データを読み込み中です...</p>
+      </div>
+    );
+  }
 
   //カテゴリーの選択・解除
   const toggleCategory = (cat: Category) => {
@@ -80,7 +111,6 @@ const EditPostForm = () => {
     if (!confirm("本当にこの記事を削除しますか？")) return;
 
     try {
-      setIsLoading(true);
       const res = await fetch(`/api/admin/posts/${id}`, {
         method: "DELETE",
         headers: {
@@ -97,24 +127,18 @@ const EditPostForm = () => {
       }
     } catch {
       alert("通信エラーが発生しました");
-    } finally {
-      setIsLoading(false);
     }
   };
 
-  const handleUpdate = async (e: React.SyntheticEvent) => {
-    e.preventDefault();
+  const onSubmit: SubmitHandler<PostsInputs> = async (data) => {
     if (!token) return;
-
-    setIsLoading(true);
 
     try {
       const body: UpdatePostRequestBody = {
-        title,
-        content,
-        thumbnailImageKey,
+        ...data,
         categories: selectedCategories,
       };
+
       const response = await fetch(`/api/admin/posts/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json", Authorization: token },
@@ -129,8 +153,6 @@ const EditPostForm = () => {
       }
     } catch {
       alert("通信エラーが発生しました");
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -139,18 +161,16 @@ const EditPostForm = () => {
       <h2 className="font-bold text-xl">記事編集</h2>
       <PostForm
         mode="edit"
-        title={title}
-        setTitle={setTitle}
-        content={content}
-        setContent={setContent}
+        register={register}
+        setValue={setValue}
         thumbnailImageKey={thumbnailImageKey}
-        setThumbnailImageKey={setThumbnailImageKey}
+        errors={errors}
         allCategories={allCategories}
         selectedCategories={selectedCategories}
         toggleCategory={toggleCategory}
-        onSubmit={handleUpdate}
+        onSubmit={handleSubmit(onSubmit)}
         onDelete={handleDelete}
-        isLoading={isLoading}
+        isLoading={isSubmitting}
       />
     </div>
   );

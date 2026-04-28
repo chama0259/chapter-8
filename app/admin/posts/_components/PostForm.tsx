@@ -1,23 +1,28 @@
 "use client";
 
 import { ChangeEvent, useState, useEffect } from "react";
+import { UseFormRegister, FieldErrors, UseFormSetValue } from "react-hook-form";
 import { supabase } from "@/app/_libs/supabase";
 import { v4 as uuidv4 } from "uuid"; //固有IDを生成するライブラリ
 import type { Category } from "@/app/api/admin/posts/[id]/route";
 import Image from "next/image";
 
+export type PostsInputs = {
+  title: string;
+  content: string;
+  thumbnailImageKey: string;
+};
+
 type Props = {
   mode: "new" | "edit";
-  title: string;
-  setTitle: (value: string) => void;
-  content: string;
-  setContent: (value: string) => void;
+  register: UseFormRegister<PostsInputs>;
+  setValue: UseFormSetValue<PostsInputs>;
   thumbnailImageKey: string;
-  setThumbnailImageKey: (value: string) => void;
+  errors: FieldErrors<PostsInputs>;
   allCategories: Category[];
   selectedCategories: Category[];
   toggleCategory: (cat: Category) => void;
-  onSubmit: (e: React.SyntheticEvent) => void;
+  onSubmit: (e?: React.BaseSyntheticEvent) => Promise<void>;
   onDelete?: () => void;
   isLoading: boolean;
 };
@@ -25,12 +30,10 @@ type Props = {
 export const PostForm = (props: Props) => {
   const {
     mode,
-    title,
-    setTitle,
-    content,
-    setContent,
+    register,
+    setValue,
     thumbnailImageKey,
-    setThumbnailImageKey,
+    errors,
     allCategories,
     selectedCategories,
     toggleCategory,
@@ -67,7 +70,7 @@ export const PostForm = (props: Props) => {
     }
 
     //data.pathに、画像固有のKeyが入っているので、thumbnailImageKeyに格納する
-    setThumbnailImageKey(data.path);
+    setValue("thumbnailImageKey", data.path);
   };
 
   useEffect(() => {
@@ -88,20 +91,23 @@ export const PostForm = (props: Props) => {
 
   return (
     <form onSubmit={onSubmit} className="flex flex-col gap-6 mt-10 mb-20">
+      {/* RHF は thumbnailImageKey を送信データに含めてくれる */}
+      <input type="hidden" {...register("thumbnailImageKey")} />
       <div className="flex flex-col gap-2">
         <label htmlFor="title" className="w-32 ">
           タイトル
         </label>
         <div className="flex-1 flex flex-col gap-1">
           <input
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
+            {...register("title", {
+              required: "タイトルは必須です",
+            })}
             disabled={isLoading}
             id="title"
-            name="title"
             type="text"
             className="flex-1 border border-gray-300 p-2 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
           />
+          <p className="text-red-500 text-xs mt-1">{errors.title?.message}</p>
         </div>
       </div>
       <div className="flex flex-col gap-2">
@@ -110,13 +116,14 @@ export const PostForm = (props: Props) => {
         </label>
         <div className="flex-1 flex flex-col gap-1">
           <textarea
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
+            {...register("content", {
+              required: "本文は必須です",
+            })}
             disabled={isLoading}
             id="content"
-            name="content"
             className="flex-1 border border-gray-300 p-2 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
           />
+          <p className="text-red-500 text-xs mt-1">{errors.content?.message}</p>
         </div>
       </div>
       <div className="flex flex-col gap-2">
@@ -128,7 +135,6 @@ export const PostForm = (props: Props) => {
             onChange={handleImageChange}
             disabled={isLoading}
             id="thumbnailImage"
-            name="thumbnailImage"
             type="file"
             accept="image/*"
             className="flex-1 border border-gray-300 p-2 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
