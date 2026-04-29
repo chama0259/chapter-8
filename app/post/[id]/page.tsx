@@ -1,14 +1,13 @@
 "use client";
 
-import useSWR from "swr";
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { formatDate } from "@/app/_utils/formatDate";
 import type { PostShowResponse } from "@/app/api/posts/[id]/route";
-import { fetcher } from "@/app/_libs/fetcher";
 import { supabase } from "@/app/_libs/supabase";
+import { useFetch } from "@/app/_hooks/useFetch";
 
 export default function PostDetail() {
   const { id } = useParams();
@@ -16,16 +15,12 @@ export default function PostDetail() {
     null,
   );
 
-  //SWR
-  const { data, error, isLoading } = useSWR<PostShowResponse>(
+  const { data, error, isLoading } = useFetch<PostShowResponse>(
     id ? `/api/posts/${id}` : null,
-    fetcher,
   );
-  //①デフォルト値の設定
-  const post = data?.post;
 
   useEffect(() => {
-    if (!post?.thumbnailImageKey) {
+    if (!data?.post?.thumbnailImageKey) {
       return;
     }
 
@@ -34,18 +29,16 @@ export default function PostDetail() {
         data: { publicUrl },
       } = await supabase.storage
         .from("post_thumbnail")
-        .getPublicUrl(post.thumbnailImageKey);
+        .getPublicUrl(data.post.thumbnailImageKey);
 
       setThumbnailImageUrl(publicUrl);
     };
     fetcher();
-  }, [post?.thumbnailImageKey]);
+  }, [data?.post?.thumbnailImageKey]);
 
   //②エラー判定
   if (error) {
-    return (
-      <div className="text-center py-10"> データの読み込みに失敗しました。</div>
-    );
+    return <div className="text-center py-10">データの読み込みに失敗しました。</div>;
   }
   //③isLoading判定
   if (isLoading) {
@@ -57,11 +50,13 @@ export default function PostDetail() {
     );
   }
 
-  if (!post) {
+  if (!data) {
     return (
       <div className="text-center py-10">記事が見つかりませんでした。</div>
     );
   }
+
+  const post = data.post;
 
   return (
     <main className="max-w-4xl mx-auto px-4 py-10">

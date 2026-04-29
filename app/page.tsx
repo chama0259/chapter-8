@@ -1,27 +1,18 @@
 "use client";
 
-import useSWR from "swr";
 import Link from "next/link";
 import { formatDate } from "@/app/_utils/formatDate";
-import { fetcher } from "./_libs/fetcher";
 import { PostsIndexResponse } from "@/app/api/posts/route";
+import { useFetch } from "@/app/_hooks/useFetch";
 
 export default function PostList() {
-  //SWR　（第一引数配列にするのはtokenなどの変数が必要な時だけ）
-  const { data, error, isLoading } = useSWR<PostsIndexResponse>(
-    "/api/posts",
-    fetcher,
-  );
+  const { data, error, isLoading } = useFetch<PostsIndexResponse>("/api/posts");
 
-  //①デフォルト値設定
-  const posts = data?.posts || [];
-  //②エラー判定
   if (error) {
     return (
       <div className="text-center py-10"> データの読み込みに失敗しました。</div>
     );
   }
-  //Loading判定
   if (isLoading) {
     return (
       <div className="flex justify-center items-center min-h-screen">
@@ -30,12 +21,19 @@ export default function PostList() {
       </div>
     );
   }
+  if (!data) {
+    return (
+      <div className="text-center py-10">データが見つかりませんでした。</div>
+    );
+  }
+
+  const posts = data.posts;
 
   return (
     <main className="max-w-4xl mx-auto py-8">
       <h1 className="text-2xl font-bold mb-8 ml-4">記事一覧</h1>
       <div className="flex flex-col gap-6">
-        {posts?.map((post) => (
+        {posts.map((post) => (
           <Link href={`/post/${post.id}`} key={post.id}>
             <article className="flex flex-row gap-6 p-4 border-b border-gray-100 transition-all hover:bg-gray-100 cursor-pointer">
               <div className="flex flex-col gap-2 flex-grow">

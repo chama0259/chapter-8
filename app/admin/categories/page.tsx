@@ -1,29 +1,22 @@
 "use client";
 
-import useSWR from "swr";
 import Link from "next/link";
 import { CategoriesIndexResponse } from "@/app/api/admin/categories/route";
 import { useSupabaseSession } from "@/app/_hooks/useSupabaseSession";
-import { fetcher } from "@/app/_libs/fetcher";
+import { useFetch } from "@/app/_hooks/useFetch";
 
 export default function CategoriesList() {
   const { token } = useSupabaseSession();
 
-  // **SWR!!** useEffectとuseState(categories,isLoading)不要になる
-  //「条件付きfetch」で、第一引数nullの場合リクエスト開始せず待機してくれる
-  const { data, error, isLoading } = useSWR<CategoriesIndexResponse>(
-    token ? ["/api/admin/categories", token] : null,
-    fetcher,
+  const { data, error, isLoading } = useFetch<CategoriesIndexResponse>(
+    token ? "/api/admin/categories" : null,
   );
-  //データが届くまでの間、またはデータ構造を扱いやすくするための変数。データがまだない時は空配列
-  const categories = data?.categories || [];
-  //エラーが発生した場合の表示
+
   if (error) {
     return (
       <div className="text-center py-10"> データの読み込みに失敗しました。</div>
     );
   }
-  //isLoading はSWR が自動で管理してくれる
   if (isLoading) {
     return (
       <div className="flex justify-center items-center min-h-screen">
@@ -32,6 +25,13 @@ export default function CategoriesList() {
       </div>
     );
   }
+  if (!data) {
+    return (
+      <div className="text-center py-10">データが見つかりませんでした。</div>
+    );
+  }
+
+  const categories = data.categories;
 
   if (categories.length === 0) {
     return (

@@ -1,6 +1,5 @@
 "use client";
 
-import useSWR from "swr";
 import { useEffect, useState, useRef } from "react";
 import { useForm, SubmitHandler, useWatch } from "react-hook-form";
 import { useParams, useRouter } from "next/navigation";
@@ -13,7 +12,7 @@ import { CategoriesIndexResponse } from "@/app/api/admin/categories/route";
 import { PostForm } from "@/app/admin/posts/_components/PostForm";
 import { useSupabaseSession } from "@/app/_hooks/useSupabaseSession";
 import type { PostsInputs } from "@/app/admin/posts/_components/PostForm";
-import { fetcher } from "@/app/_libs/fetcher";
+import { useFetch } from "@/app/_hooks/useFetch";
 
 const EditPostForm = () => {
   const { id } = useParams();
@@ -33,76 +32,73 @@ const EditPostForm = () => {
   const thumbnailImageKey = useWatch({ control, name: "thumbnailImageKey" });
   const [selectedCategories, setSelectedCategories] = useState<Category[]>([]);
   const isInitialized = useRef(false);
+  //カテゴリー選択操作のフラグ
+  const [hasUserChangedCategories, setHasUserChangedCategories] =
+    useState(false);
 
-  //SWR-1・・・全カテゴリー取得用
-  const {
-    data: catData,
-    error: catError,
-    isLoading: isCatLoading,
-  } = useSWR<CategoriesIndexResponse>(
-    token ? ["/api/admin/categories", token] : null,
-    fetcher,
-  );
-  //SWR-2・・・編集対象の記事取得用
+  //SWR
   const {
     data: postData,
     error: postError,
     isLoading: isPostLoading,
-  } = useSWR<PostShowResponse>(
-    id && token ? [`/api/admin/posts/${id}`, token] : null,
-    fetcher,
-  );
+  } = useFetch<PostShowResponse>(id && token ? `/api/admin/posts/${id}` : null);
+  const {
+    data: catData,
+    error: catError,
+    isLoading: isCatLoading,
+  } = useFetch<CategoriesIndexResponse>(token ? "/api/admin/categories" : null);
 
   useEffect(() => {
-    //データがない、または既に初期化済みの場合は何もしない
-    if (!postData?.post || isInitialized.current) return;
+    //既に初期化済みの場合は何もしない
+    if (isInitialized.current) return;
+    //データ揃ってから初期化処理行う。
+    if (!postData?.post || !catData?.categories) return;
 
     const { post } = postData;
-    //1.フォームの基本情報をリセット
-    const timer = setTimeout(() => {
-      reset({
-        title: post.title,
-        content: post.content,
-        thumbnailImageKey: post.thumbnailImageKey,
-      });
-      //2.選択済みカテゴリーの状態を更新
-      const currentCats = post.postCategories.map((pc) => pc.category);
-      setSelectedCategories(currentCats);
+    reset({
+      title: post.title,
+      content: post.content,
+      thumbnailImageKey: post.thumbnailImageKey,
+    });
 
-      //「初期化完了」と旗立てる
-      isInitialized.current = true;
-    }, 0);
+    //「初期化完了」と旗立てる
+    isInitialized.current = true;
+  }, [postData, catData, reset]);
 
-    return () => clearTimeout(timer); //クリーンアップ
-  }, [postData, reset]);
-
-  //①デフォルト値の設定
-  const allCategories = catData?.categories || [];
-  const isLoading = isCatLoading || isPostLoading;
-  const error = catError || postError;
-  //②エラー判定・
-  if (error) {
+  if (postError || catError)
     return (
       <div className="text-center py-10"> データの読み込みに失敗しました。</div>
     );
-  }
-  //③Loading判定・
-  if (isLoading) {
+  if (isPostLoading || isCatLoading)
     return (
       <div className="flex justify-center items-center min-h-screen">
         <div className="animate-spin h-10 w-10 border-4 border-blue-500 rounded-full border-t-transparent"></div>
         <p className="ml-4">データを読み込み中です...</p>
       </div>
     );
-  }
+  if (!postData || !catData)
+    return (
+      <div className="text-center py-10">データが見つかりませんでした。</div>
+    );
 
   //カテゴリーの選択・解除
+  const initialSelectedCategories = postData.post.postCategories.map(
+    (pc) => pc.category,
+  );
+  const selectedCategoriesForView = hasUserChangedCategories
+    ? selectedCategories
+    : initialSelectedCategories;
+  const selectedCategoriesForSubmit = selectedCategoriesForView;
+
   const toggleCategory = (cat: Category) => {
-    const isSelected = selectedCategories.some((s) => s.id === cat.id);
+    setHasUserChangedCategories(true);
+    const isSelected = selectedCategoriesForView.some((s) => s.id === cat.id);
     if (isSelected) {
-      setSelectedCategories(selectedCategories.filter((s) => s.id !== cat.id));
+      setSelectedCategories(
+        selectedCategoriesForView.filter((s) => s.id !== cat.id),
+      );
     } else {
-      setSelectedCategories([...selectedCategories, cat]);
+      setSelectedCategories([...selectedCategoriesForView, cat]);
     }
   };
 
@@ -136,7 +132,7 @@ const EditPostForm = () => {
     try {
       const body: UpdatePostRequestBody = {
         ...data,
-        categories: selectedCategories,
+        categories: selectedCategoriesForSubmit,
       };
 
       const response = await fetch(`/api/admin/posts/${id}`, {
@@ -156,6 +152,9 @@ const EditPostForm = () => {
     }
   };
 
+  // 早期リターン済みなので optional chain 不要//何でここなの？？
+  const allCategories = catData.categories;
+
   return (
     <div className="container mx-auto">
       <h2 className="font-bold text-xl">記事編集</h2>
@@ -166,7 +165,7 @@ const EditPostForm = () => {
         thumbnailImageKey={thumbnailImageKey}
         errors={errors}
         allCategories={allCategories}
-        selectedCategories={selectedCategories}
+        selectedCategories={selectedCategoriesForView}
         toggleCategory={toggleCategory}
         onSubmit={handleSubmit(onSubmit)}
         onDelete={handleDelete}

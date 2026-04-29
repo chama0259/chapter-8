@@ -1,29 +1,23 @@
 "use client";
 
-import useSWR from "swr";
 import Link from "next/link";
 import { formatDate } from "@/app/_utils/formatDate";
 import { useSupabaseSession } from "@/app/_hooks/useSupabaseSession";
-import { fetcher } from "@/app/_libs/fetcher";
 import { PostsIndexResponse } from "@/app/api/admin/posts/route";
+import { useFetch } from "@/app/_hooks/useFetch";
 
 export default function PostList() {
   const { token } = useSupabaseSession();
 
-  //**SWR**
-  const { data, error, isLoading } = useSWR<PostsIndexResponse>(
-    token ? ["/api/admin/posts", token] : null,
-    fetcher,
+  const { data, error, isLoading } = useFetch<PostsIndexResponse>(
+    token ? "/api/admin/posts" : null,
   );
-  //①デフォルト値の設定
-  const posts = data?.posts || [];
-  //②エラー判定
   if (error) {
     return (
       <div className="text-center py-10"> データの読み込みに失敗しました。</div>
     );
   }
-  //③Loading判定
+
   if (isLoading) {
     return (
       <div className="flex justify-center items-center min-h-screen">
@@ -32,6 +26,13 @@ export default function PostList() {
       </div>
     );
   }
+  if (!data) {
+    return (
+      <div className="text-center py-10">データが見つかりませんでした。</div>
+    );
+  }
+
+  const posts = data.posts;
 
   return (
     <main className="w-full px-6 ">
@@ -47,7 +48,6 @@ export default function PostList() {
         </Link>
       </div>
       <div className="flex flex-col gap-6">
-        {/* デフォルト値設定で空配列保証されたので？不要 */}
         {posts.map((post) => (
           <Link href={`/admin/posts/${post.id}`} key={post.id}>
             <article className="flex flex-row gap-6 p-4 border-b border-gray-100 transition-all hover:bg-gray-100 cursor-pointer">

@@ -1,6 +1,5 @@
 "use client";
 
-import useSWR from "swr";
 import { useState } from "react";
 import { useForm, SubmitHandler, useWatch } from "react-hook-form";
 import { useRouter } from "next/navigation";
@@ -10,7 +9,7 @@ import { CategoriesIndexResponse } from "@/app/api/admin/categories/route";
 import { PostForm } from "@/app/admin/posts/_components/PostForm";
 import { useSupabaseSession } from "@/app/_hooks/useSupabaseSession";
 import type { PostsInputs } from "@/app/admin/posts/_components/PostForm";
-import { fetcher } from "@/app/_libs/fetcher";
+import { useFetch } from "@/app/_hooks/useFetch";
 
 const NewPostForm = () => {
   const router = useRouter();
@@ -32,20 +31,15 @@ const NewPostForm = () => {
 
   const thumbnailImageKey = useWatch({ control, name: "thumbnailImageKey" });
   const [selectedCategories, setSelectedCategories] = useState<Category[]>([]);
-  //SWR
-  const { data, error, isLoading } = useSWR<CategoriesIndexResponse>(
-    token ? ["/api/admin/categories", token] : null,
-    fetcher,
+  const { data, error, isLoading } = useFetch<CategoriesIndexResponse>(
+    token ? "/api/admin/categories" : null,
   );
 
-  //①デフォルト値設定
-  const allCategories = data?.categories || [];
-  //②エラー判定
+  // 3段階チェック: error -> loading -> no data
   if (error)
     return (
       <div className="text-center py-10"> データの読み込みに失敗しました。</div>
     );
-  //③Loading判定
   if (isLoading) {
     return (
       <div className="flex justify-center items-center min-h-screen">
@@ -54,6 +48,11 @@ const NewPostForm = () => {
       </div>
     );
   }
+  if (!data) {
+    return <div className="text-center py-10">データが見つかりませんでした。</div>;
+  }
+
+  const allCategories = data.categories;
 
   //カテゴリーの選択・解除
   const toggleCategory = (cat: Category) => {
