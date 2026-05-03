@@ -16,7 +16,7 @@ export default function PostDetail() {
   );
 
   const { data, error, isLoading } = useFetch<PostShowResponse>(
-    id ? `/api/posts/${id}` : null,
+    `/api/posts/${id}`,
   );
 
   useEffect(() => {
@@ -38,7 +38,9 @@ export default function PostDetail() {
 
   //②エラー判定
   if (error) {
-    return <div className="text-center py-10">データの読み込みに失敗しました。</div>;
+    return (
+      <div className="text-center py-10">データの読み込みに失敗しました。</div>
+    );
   }
   //③isLoading判定
   if (isLoading) {

@@ -2,16 +2,12 @@
 
 import Link from "next/link";
 import { formatDate } from "@/app/_utils/formatDate";
-import { useSupabaseSession } from "@/app/_hooks/useSupabaseSession";
 import { PostsIndexResponse } from "@/app/api/admin/posts/route";
 import { useFetch } from "@/app/_hooks/useFetch";
 
 export default function PostList() {
-  const { token } = useSupabaseSession();
-
-  const { data, error, isLoading } = useFetch<PostsIndexResponse>(
-    token ? "/api/admin/posts" : null,
-  );
+  const { data, error, isLoading } =
+    useFetch<PostsIndexResponse>("/api/admin/posts");
   if (error) {
     return (
       <div className="text-center py-10"> データの読み込みに失敗しました。</div>

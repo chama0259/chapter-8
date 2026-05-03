@@ -27,7 +27,7 @@ const EditCategory = () => {
 
   const isInitialized = useRef(false);
   const { data, error, isLoading } = useFetch<CategoryShowResponse>(
-    id && token ? `/api/admin/categories/${id}` : null,
+    `/api/admin/categories/${id}`,
   );
 
   useEffect(() => {

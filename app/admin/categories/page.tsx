@@ -2,14 +2,11 @@
 
 import Link from "next/link";
 import { CategoriesIndexResponse } from "@/app/api/admin/categories/route";
-import { useSupabaseSession } from "@/app/_hooks/useSupabaseSession";
 import { useFetch } from "@/app/_hooks/useFetch";
 
 export default function CategoriesList() {
-  const { token } = useSupabaseSession();
-
   const { data, error, isLoading } = useFetch<CategoriesIndexResponse>(
-    token ? "/api/admin/categories" : null,
+    "/api/admin/categories",
   );
 
   if (error) {

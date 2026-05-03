@@ -32,7 +32,7 @@ const NewPostForm = () => {
   const thumbnailImageKey = useWatch({ control, name: "thumbnailImageKey" });
   const [selectedCategories, setSelectedCategories] = useState<Category[]>([]);
   const { data, error, isLoading } = useFetch<CategoriesIndexResponse>(
-    token ? "/api/admin/categories" : null,
+    "/api/admin/categories",
   );
 
   // 3段階チェック: error -> loading -> no data
@@ -49,7 +49,9 @@ const NewPostForm = () => {
     );
   }
   if (!data) {
-    return <div className="text-center py-10">データが見つかりませんでした。</div>;
+    return (
+      <div className="text-center py-10">データが見つかりませんでした。</div>
+    );
   }
 
   const allCategories = data.categories;

@@ -41,12 +41,12 @@ const EditPostForm = () => {
     data: postData,
     error: postError,
     isLoading: isPostLoading,
-  } = useFetch<PostShowResponse>(id && token ? `/api/admin/posts/${id}` : null);
+  } = useFetch<PostShowResponse>(`/api/admin/posts/${id}`);
   const {
     data: catData,
     error: catError,
     isLoading: isCatLoading,
-  } = useFetch<CategoriesIndexResponse>(token ? "/api/admin/categories" : null);
+  } = useFetch<CategoriesIndexResponse>("/api/admin/categories");
 
   useEffect(() => {
     //既に初期化済みの場合は何もしない
