@@ -1,34 +1,60 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { useForm, SubmitHandler, useWatch } from "react-hook-form";
 import { useRouter } from "next/navigation";
 import type { Category } from "@/app/api/admin/posts/[id]/route";
-import { CreatePostRequestBody } from "@/app/api/admin/posts/route";
+import type { CreatePostRequestBody } from "@/app/api/admin/posts/route";
+import { CategoriesIndexResponse } from "@/app/api/admin/categories/route";
 import { PostForm } from "@/app/admin/posts/_components/PostForm";
+import { useSupabaseSession } from "@/app/_hooks/useSupabaseSession";
+import type { PostsInputs } from "@/app/admin/posts/_components/PostForm";
+import { useFetch } from "@/app/_hooks/useFetch";
 
 const NewPostForm = () => {
   const router = useRouter();
+  const { token } = useSupabaseSession();
 
-  const [title, setTitle] = useState("");
-  const [content, setContent] = useState("");
-  const [thumbnailUrl, setThumbnailUrl] = useState("");
-  const [allCategories, setAllCategories] = useState<Category[]>([]);
+  const {
+    register,
+    handleSubmit,
+    setValue,
+    control,
+    formState: { errors, isSubmitting },
+  } = useForm<PostsInputs>({
+    defaultValues: {
+      title: "",
+      content: "",
+      thumbnailImageKey: "",
+    },
+  });
+
+  const thumbnailImageKey = useWatch({ control, name: "thumbnailImageKey" });
   const [selectedCategories, setSelectedCategories] = useState<Category[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const { data, error, isLoading } = useFetch<CategoriesIndexResponse>(
+    "/api/admin/categories",
+  );
 
-  useEffect(() => {
-    const fetchAllCategories = async () => {
-      try {
-        //全カテゴリーを取得
-        const catRes = await fetch("/api/admin/categories");
-        const catData = await catRes.json();
-        setAllCategories(catData.categories);
-      } catch (e) {
-        console.error("データ取得エラー", e);
-      }
-    };
-    fetchAllCategories();
-  }, []);
+  // 3段階チェック: error -> loading -> no data
+  if (error)
+    return (
+      <div className="text-center py-10"> データの読み込みに失敗しました。</div>
+    );
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center min-h-screen">
+        <div className="animate-spin h-10 w-10 border-4 border-blue-500 rounded-full border-t-transparent"></div>
+        <p className="ml-4">カテゴリーを読み込み中です...</p>
+      </div>
+    );
+  }
+  if (!data) {
+    return (
+      <div className="text-center py-10">データが見つかりませんでした。</div>
+    );
+  }
+
+  const allCategories = data.categories;
 
   //カテゴリーの選択・解除
   const toggleCategory = (cat: Category) => {
@@ -40,21 +66,18 @@ const NewPostForm = () => {
     }
   };
 
-  const handleCreate = async (e: React.SyntheticEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
+  const onSubmit: SubmitHandler<PostsInputs> = async (data) => {
+    if (!token) return;
 
     try {
       const body: CreatePostRequestBody = {
-        title,
-        content,
-        thumbnailUrl,
+        ...data,
         categories: selectedCategories,
       };
 
       const response = await fetch(`/api/admin/posts`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", Authorization: token },
         body: JSON.stringify(body),
       });
 
@@ -66,8 +89,6 @@ const NewPostForm = () => {
       }
     } catch {
       alert("通信エラーが発生しました");
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -76,17 +97,15 @@ const NewPostForm = () => {
       <h2 className="font-bold text-xl">記事作成</h2>
       <PostForm
         mode="new"
-        title={title}
-        setTitle={setTitle}
-        content={content}
-        setContent={setContent}
-        thumbnailUrl={thumbnailUrl}
-        setThumbnailUrl={setThumbnailUrl}
+        register={register}
+        setValue={setValue}
+        thumbnailImageKey={thumbnailImageKey}
+        errors={errors}
         allCategories={allCategories}
         selectedCategories={selectedCategories}
         toggleCategory={toggleCategory}
-        onSubmit={handleCreate}
-        isLoading={isLoading}
+        onSubmit={handleSubmit(onSubmit)}
+        isLoading={isSubmitting}
       />
     </div>
   );

@@ -1,30 +1,33 @@
 "use client";
 
-import { useState } from "react";
+import { useForm, SubmitHandler } from "react-hook-form";
 import { useRouter } from "next/navigation";
-import { CreateCategoryRequestBody } from "@/app/api/admin/categories/route";
 import { CategoryForm } from "@/app/admin/categories/_components/CategoryForm";
+import { useSupabaseSession } from "@/app/_hooks/useSupabaseSession";
+import type { CategoryInputs } from "@/app/admin/categories/_components/CategoryForm";
 
 const NewCategory = () => {
   const router = useRouter();
+  const { token } = useSupabaseSession();
 
-  const [name, setName] = useState("");
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = useForm<CategoryInputs>({
+    defaultValues: {
+      name: "",
+    },
+  });
 
-  const [isLoading, setIsLoading] = useState(false);
-
-  const handleCreate = async (e: React.SyntheticEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
+  const onSubmit: SubmitHandler<CategoryInputs> = async (data) => {
+    if (!token) return;
 
     try {
-      const body: CreateCategoryRequestBody = {
-        name,
-      };
-
       const res = await fetch("/api/admin/categories", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
+        headers: { "Content-Type": "application/json", Authorization: token },
+        body: JSON.stringify(data),
       });
 
       if (res.ok) {
@@ -35,19 +38,18 @@ const NewCategory = () => {
       }
     } catch {
       alert("通信エラーが発生しました");
-    } finally {
-      setIsLoading(false);
     }
   };
+
   return (
     <div className="container mx-auto">
       <h2 className="font-bold text-xl">カテゴリー作成</h2>
       <CategoryForm
         mode="new"
-        name={name}
-        setName={setName}
-        isLoading={isLoading}
-        onSubmit={handleCreate}
+        register={register}
+        errors={errors}
+        isLoading={isSubmitting}
+        onSubmit={handleSubmit(onSubmit)}
       />
     </div>
   );

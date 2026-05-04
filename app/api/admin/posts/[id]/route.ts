@@ -1,5 +1,6 @@
 import { prisma } from "@/app/_libs/prisma";
 import { NextResponse, NextRequest } from "next/server";
+import { supabase } from "@/app/_libs/supabase";
 
 export type Category = {
   id: number;
@@ -11,7 +12,7 @@ export type PostShowResponse = {
     id: number;
     title: string;
     content: string;
-    thumbnailUrl: string;
+    thumbnailImageKey: string;
     createdAt: Date;
     updatedAt: Date;
     postCategories: {
@@ -25,14 +26,20 @@ export type UpdatePostRequestBody = {
   title: string;
   content: string;
   categories: { id: number }[];
-  thumbnailUrl: string;
+  thumbnailImageKey: string;
 };
 
 export const GET = async (
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) => {
   const { id } = await params;
+  //tokenチェック
+  const token = request.headers.get("Authorization") ?? "";
+  const { error } = await supabase.auth.getUser(token);
+  if (error) {
+    return NextResponse.json({ message: error.message }, { status: 401 });
+  }
 
   try {
     const post = await prisma.post.findUnique({
@@ -74,10 +81,19 @@ export const PUT = async (
 ) => {
   //paramsからid取り出す
   const { id } = await params;
+  //tokenチェック
+  const token = request.headers.get("Authorization") ?? "";
+  const { error } = await supabase.auth.getUser(token);
+  if (error)
+    return NextResponse.json({ message: error.message }, { status: 401 });
 
   //リクエストのbody取り出す
-  const { title, content, categories, thumbnailUrl }: UpdatePostRequestBody =
-    await request.json();
+  const {
+    title,
+    content,
+    categories,
+    thumbnailImageKey,
+  }: UpdatePostRequestBody = await request.json();
 
   try {
     //idを指定して、Postを更新
@@ -88,7 +104,7 @@ export const PUT = async (
       data: {
         title,
         content,
-        thumbnailUrl,
+        thumbnailImageKey,
       },
     });
 
@@ -121,11 +137,16 @@ export const PUT = async (
 
 //DELETEリクエストの際に呼ばれる
 export const DELETE = async (
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) => {
   //paramsのidを取り出す
   const { id } = await params;
+  //tokenチェック
+  const token = request.headers.get("Authorization") ?? "";
+  const { error } = await supabase.auth.getUser(token);
+  if (error)
+    return NextResponse.json({ message: error.message }, { status: 401 });
 
   try {
     //idを指定してPostを削除

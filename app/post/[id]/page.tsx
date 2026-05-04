@@ -6,32 +6,43 @@ import Link from "next/link";
 import Image from "next/image";
 import { formatDate } from "@/app/_utils/formatDate";
 import type { PostShowResponse } from "@/app/api/posts/[id]/route";
+import { supabase } from "@/app/_libs/supabase";
+import { useFetch } from "@/app/_hooks/useFetch";
 
 export default function PostDetail() {
   const { id } = useParams();
+  const [thumbnailImageUrl, setThumbnailImageUrl] = useState<string | null>(
+    null,
+  );
 
-  const [post, setPost] = useState<PostShowResponse["post"] | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const { data, error, isLoading } = useFetch<PostShowResponse>(
+    `/api/posts/${id}`,
+  );
 
   useEffect(() => {
-    const fetchPost = async () => {
-      const res = await fetch(`/api/posts/${id}`, {});
+    if (!data?.post?.thumbnailImageKey) {
+      return;
+    }
 
-      if (!res.ok) {
-        setError("データの取得に失敗しました");
-        setIsLoading(false);
-        return;
-      }
+    const fetcher = async () => {
+      const {
+        data: { publicUrl },
+      } = await supabase.storage
+        .from("post_thumbnail")
+        .getPublicUrl(data.post.thumbnailImageKey);
 
-      const { post } = await res.json();
-      setPost(post);
-      setIsLoading(false);
+      setThumbnailImageUrl(publicUrl);
     };
+    fetcher();
+  }, [data?.post?.thumbnailImageKey]);
 
-    fetchPost();
-  }, [id]);
-
+  //②エラー判定
+  if (error) {
+    return (
+      <div className="text-center py-10">データの読み込みに失敗しました。</div>
+    );
+  }
+  //③isLoading判定
   if (isLoading) {
     return (
       <div className="flex justify-center items-center min-h-screen">
@@ -40,20 +51,23 @@ export default function PostDetail() {
       </div>
     );
   }
-  if (error) return <div>{error}</div>;
-  if (!post) return <div>記事が見つかりませんでした</div>;
+
+  if (!data) {
+    return (
+      <div className="text-center py-10">記事が見つかりませんでした。</div>
+    );
+  }
+
+  const post = data.post;
 
   return (
     <main className="max-w-4xl mx-auto px-4 py-10">
       <article className="flex flex-col gap-4">
-        <div className="relative w-full h-[400px]">
-          <Image
-            src={post.thumbnailUrl}
-            alt={`${post.title}の画像`}
-            fill
-            priority
-          />
-        </div>
+        {thumbnailImageUrl && (
+          <div className="relative w-full h-[400px]">
+            <Image src={thumbnailImageUrl} alt={"thumbnail"} fill priority />
+          </div>
+        )}
         <div className="flex items-center gap-3 mt-2">
           <time
             // new Date() したものを .toISOString() で文字列に戻す。機械用の生データに戻す。
